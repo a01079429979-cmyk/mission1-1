@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 영화 티어리스트</title>
+    <style>
+        /* 전체 페이지 기본 스타일 */
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background-color: #1e1e1e; /* 눈이 편안한 어두운 배경 */
+            color: #ffffff;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        /* 중앙 정렬 및 최대 너비 설정 */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 28px;
+        }
+
+        /* 티어표 각 행(가로줄) 스타일 */
+        .tier-row {
+            display: flex;
+            background-color: #2d2d2d;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 90px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* 좌측 등급(A, B, C, D) 라벨 스타일 */
+        .tier-label {
+            width: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #111;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
+        }
+
+        /* 미결정 항목 반영: 등급별 배경 색상 */
+        .tier-A { background-color: #ff7f7f; } /* 빨강 */
+        .tier-B { background-color: #ffbf7f; } /* 주황 */
+        .tier-C { background-color: #7fff7f; } /* 초록 */
+        .tier-D { background-color: #7f7fff; } /* 파랑 */
+
+        /* 영화가 추가되는 영역 */
+        .tier-content {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* 개별 영화 아이템 스타일 */
+        .movie-item {
+            background-color: #444;
+            padding: 8px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 미결정 항목 반영: 삭제 방식 (✕ 버튼) */
+        .delete-btn {
+            cursor: pointer;
+            color: #ff6b6b;
+            font-weight: bold;
+            border: none;
+            background: none;
+            padding: 0;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-btn:hover {
+            color: #ff3b3b;
+        }
+
+        /* 미결정 항목 반영: 입력창 위치 (각 행의 우측 끝) */
+        .tier-input-area {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #333;
+            border-left: 1px solid #444;
+        }
+
+        .tier-input-area input {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            margin-right: 8px;
+            background-color: #555;
+            color: #fff;
+            outline: none;
+            width: 150px;
+        }
+        .tier-input-area input::placeholder {
+            color: #aaa;
+        }
+
+        .tier-input-area button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .tier-input-area button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🎬 나만의 영화 티어리스트</h1>
+        <!-- 자바스크립트를 통해 여기에 티어표가 생성됩니다 -->
+        <div id="tier-board"></div>
+    </div>
+
+    <script>
+        // 1. 기본 데이터 설정 (A, B, C, D 티어)
+        const tiers = ['A', 'B', 'C', 'D'];
+        let movieData = { A: [], B: [], C: [], D: [] };
+
+        // 2. 초기화 함수 (페이지가 열릴 때 실행)
+        function init() {
+            // 로컬 스토리지에서 저장된 데이터 불러오기
+            const savedData = localStorage.getItem('myMovieTierList');
+            if (savedData) {
+                movieData = JSON.parse(savedData); // 저장된 데이터가 있으면 덮어쓰기
+            }
+            render(); // 화면 그리기
+        }
+
+        // 3. 데이터 저장 함수
+        function saveData() {
+            // 현재 movieData를 문자열로 변환하여 브라우저에 저장
+            localStorage.setItem('myMovieTierList', JSON.stringify(movieData));
+        }
+
+        // 4. 영화 추가 함수
+        function addMovie(tier) {
+            const input = document.getElementById(`input-${tier}`);
+            const title = input.value.trim(); // 양끝 공백 제거
+
+            if (title !== '') {
+                movieData[tier].push(title); // 해당 티어 배열에 제목 추가
+                input.value = ''; // 입력창 비우기
+                saveData(); // 변경된 데이터 저장
+                render(); // 화면 다시 그리기
+            }
+        }
+
+        // 5. 엔터키 입력 처리 함수
+        function handleKeyPress(event, tier) {
+            if (event.key === 'Enter') {
+                addMovie(tier);
+            }
+        }
+
+        // 6. 영화 삭제 함수
+        function deleteMovie(tier, index) {
+            movieData[tier].splice(index, 1); // 해당 티어 배열에서 특정 인덱스의 항목 1개 삭제
+            saveData(); // 변경된 데이터 저장
+            render(); // 화면 다시 그리기
+        }
+
+        // 7. 화면을 그리는 함수
+        function render() {
+            const board = document.getElementById('tier-board');
+            board.innerHTML = ''; // 기존 내용을 싹 지우고 새로 그림
+
+            // 각 티어별로 HTML 요소를 생성
+            tiers.forEach(tier => {
+                // 행(Row) 생성
+                const row = document.createElement('div');
+                row.className = 'tier-row';
+
+                // 좌측 라벨 (A, B, C, D)
+                const label = document.createElement('div');
+                label.className = `tier-label tier-${tier}`;
+                label.textContent = tier;
+                row.appendChild(label);
+
+                // 중간 영화 목록 영역
+                const content = document.createElement('div');
+                content.className = 'tier-content';
+                
+                // 저장된 영화들을 버튼 형태로 생성
+                movieData[tier].forEach((movie, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'movie-item';
+                    item.innerHTML = `
+                        <span>${movie}</span>
+                        <button class="delete-btn" onclick="deleteMovie('${tier}', ${index})" title="삭제">✕</button>
+                    `;
+                    content.appendChild(item);
+                });
+                row.appendChild(content);
+
+                // 우측 입력창 영역
+                const inputArea = document.createElement('div');
+                inputArea.className = 'tier-input-area';
+                inputArea.innerHTML = `
+                    <input type="text" id="input-${tier}" placeholder="${tier}등급 추가" onkeypress="handleKeyPress(event, '${tier}')">
+                    <button onclick="addMovie('${tier}')">추가</button>
+                `;
+                row.appendChild(inputArea);
+
+                // 완성된 행을 보드에 추가
+                board.appendChild(row);
+            });
+        }
+
+        // 창이 로드될 때 init 함수 실행
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>영화 티어리스트</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+      color: #111;
+    }
+
+    /* ── 보관함 ── */
+    .storage {
+      max-width: 860px;
+      margin: 0 auto 28px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .storage h2 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #333;
+    }
+    .storage-input {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .storage-input input {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      background: #fafafa;
+      color: #222;
+    }
+    .storage-input input:focus { border-color: #888; background: #fff; }
+    .storage-input button {
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #444;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .storage-input button:hover { background: #222; }
+
+    .storage-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px;
+      border: 2px dashed #e0e0e0;
+      border-radius: 8px;
+    }
+    .storage-list.drag-over { border-color: #888; background: #fafafa; }
+
+    /* ── 영화 태그 ── */
+    .movie-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f0f0f0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      color: #333;
+      cursor: grab;
+      user-select: none;
+    }
+    .movie-tag:active { cursor: grabbing; }
+    .movie-tag.dragging { opacity: 0.4; }
+    .movie-tag button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #999;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .movie-tag button:hover { color: #e05c5c; }
+
+    /* ── 티어 표 ── */
+    .tier-table {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .tier-row {
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid #e8e8e8;
+    }
+    .tier-row:last-child { border-bottom: none; }
+
+    .tier-label {
+      width: 64px;
+      min-width: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      user-select: none;
+    }
+    .tier-A { background: #e05c5c; }
+    .tier-B { background: #e09a3a; }
+    .tier-C { background: #6aab6a; }
+    .tier-D { background: #5b8fd4; }
+
+    .tier-content {
+      flex: 1;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+      min-height: 60px;
+    }
+    .tier-content.drag-over { background: #f3f8ff; }
+
+    .empty-msg {
+      font-size: 0.82rem;
+      color: #bbb;
+      align-self: center;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎬 영화 티어리스트</h1>
+
+  <!-- 보관함 -->
+  <div class="storage">
+    <h2>📦 보관함 — 영화를 추가한 뒤 아래 등급으로 끌어다 놓으세요</h2>
+    <div class="storage-input">
+      <input type="text" id="movieInput" placeholder="영화 제목을 입력하세요" maxlength="60" />
+      <button id="addBtn">추가</button>
+    </div>
+    <div class="storage-list" id="storageList" data-tier="storage"></div>
+  </div>
+
+  <!-- 티어 표 -->
+  <div class="tier-table" id="tierTable"></div>
+
+  <footer>데이터는 이 브라우저에 자동 저장됩니다.</footer>
+
+  <script>
+    const TIERS = ['A', 'B', 'C', 'D'];
+
+    // 데이터 불러오기 (storage = 보관함)
+    function loadData() {
+      try {
+        return JSON.parse(localStorage.getItem('movieTierlist2'))
+          || { storage:[], A:[], B:[], C:[], D:[] };
+      } catch {
+        return { storage:[], A:[], B:[], C:[], D:[] };
+      }
+    }
+
+    function saveData(data) {
+      localStorage.setItem('movieTierlist2', JSON.stringify(data));
+    }
+
+    let dragInfo = null; // { title, from }
+
+    // 영화 태그 만들기
+    function createTag(title, from, data) {
+      const tag = document.createElement('span');
+      tag.className = 'movie-tag';
+      tag.draggable = true;
+
+      const text = document.createElement('span');
+      text.textContent = title;
+
+      const btn = document.createElement('button');
+      btn.textContent = '✕';
+      btn.title = '삭제';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        data[from] = data[from].filter(t => t !== title);
+        saveData(data);
+        render(data);
+      });
+
+      // 드래그 시작
+      tag.addEventListener('dragstart', () => {
+        dragInfo = { title, from };
+        tag.classList.add('dragging');
+      });
+      tag.addEventListener('dragend', () => {
+        tag.classList.remove('dragging');
+      });
+
+      tag.appendChild(text);
+      tag.appendChild(btn);
+      return tag;
+    }
+
+    // 드롭 받는 영역 설정
+    function setupDropZone(zone, targetKey, data) {
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+      });
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('drag-over');
+      });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (!dragInfo) return;
+
+        const { title, from } = dragInfo;
+        if (from === targetKey) { dragInfo = null; return; }
+        if (data[targetKey].includes(title)) { dragInfo = null; return; }
+
+        // 기존 위치에서 제거 후 새 위치에 추가
+        data[from] = data[from].filter(t => t !== title);
+        data[targetKey].push(title);
+        saveData(data);
+        render(data);
+        dragInfo = null;
+      });
+    }
+
+    function render(data) {
+      // 보관함
+      const storageList = document.getElementById('storageList');
+      storageList.innerHTML = '';
+      if (data.storage.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'empty-msg';
+        empty.textContent = '추가한 영화가 여기에 담깁니다.';
+        storageList.appendChild(empty);
+      } else {
+        data.storage.forEach(title => {
+          storageList.appendChild(createTag(title, 'storage', data));
+        });
+      }
+      setupDropZone(storageList, 'storage', data);
+
+      // 티어 표
+      const table = document.getElementById('tierTable');
+      table.innerHTML = '';
+      TIERS.forEach(tier => {
+        const row = document.createElement('div');
+        row.className = 'tier-row';
+
+        const label = document.createElement('div');
+        label.className = `tier-label tier-${tier}`;
+        label.textContent = tier;
+
+        const content = document.createElement('div');
+        content.className = 'tier-content';
+        content.dataset.tier = tier;
+
+        if (data[tier].length === 0) {
+          const empty = document.createElement('span');
+          empty.className = 'empty-msg';
+          empty.textContent = '여기로 영화를 끌어다 놓으세요';
+          content.appendChild(empty);
+        } else {
+          data[tier].forEach(title => {
+            content.appendChild(createTag(title, tier, data));
+          });
+        }
+        setupDropZone(content, tier, data);
+
+        row.appendChild(label);
+        row.appendChild(content);
+        table.appendChild(row);
+      });
+    }
+
+    // 보관함에 영화 추가
+    const data = loadData();
+    const input = document.getElementById('movieInput');
+    const addBtn = document.getElementById('addBtn');
+
+    function addMovie() {
+      const title = input.value.trim();
+      if (!title) { input.focus(); return; }
+      // 중복 확인 (모든 영역)
+      const all = [...data.storage, ...data.A, ...data.B, ...data.C, ...data.D];
+      if (all.includes(title)) {
+        alert(`"${title}"은(는) 이미 추가되어 있습니다.`);
+        input.select();
+        return;
+      }
+      data.storage.push(title);
+      saveData(data);
+      render(data);
+      input.value = '';
+      input.focus();
+    }
+
+    addBtn.addEventListener('click', addMovie);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addMovie(); });
+
+    render(data);
+  </script>
+</body>
+</html>

@@ -5,225 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>영화 티어리스트</title>
   <style>
-    /* ── 기본 리셋 ── */
+    /* ── 기본 스타일 ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #222; min-height: 100vh; padding: 40px 20px; }
+    h1 { text-align: center; font-size: 1.8rem; font-weight: 700; margin-bottom: 20px; color: #111; }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f5f5f5;
-      color: #222;
-      min-height: 100vh;
-      padding: 40px 20px;
-    }
+    /* ── 상단 컨트롤 버튼 (백업/복구) ── */
+    .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+    .btn-secondary { background: #666; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+    .btn-secondary:hover { background: #444; }
 
-    /* ── 페이지 제목 ── */
-    h1 {
-      text-align: center;
-      font-size: 1.8rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      margin-bottom: 32px;
-      color: #111;
-    }
-
-    /* ── 표 전체 컨테이너 ── */
-    .tier-table {
-      width: 100%;
-      max-width: 860px;
-      margin: 0 auto;
-      border-collapse: collapse;
-      background: #fff;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    }
-
-    /* ── 티어 행 ── */
-    .tier-row {
-      display: flex;
-      align-items: stretch;
-      border-bottom: 1px solid #e8e8e8;
-    }
+    /* ── 티어 테이블 스타일 ── */
+    .tier-table { width: 100%; max-width: 860px; margin: 0 auto; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .tier-row { display: flex; align-items: stretch; border-bottom: 1px solid #e8e8e8; }
     .tier-row:last-child { border-bottom: none; }
-
-    /* ── 티어 라벨 셀 ── */
-    .tier-label {
-      width: 64px;
-      min-width: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #fff;
-      user-select: none;
-    }
+    .tier-label { width: 64px; min-width: 64px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff; user-select: none; }
     .tier-A { background: #e05c5c; }
     .tier-B { background: #e09a3a; }
     .tier-C { background: #6aab6a; }
     .tier-D { background: #5b8fd4; }
 
-    /* ── 영화 목록 + 입력 영역 ── */
-    .tier-content {
-      flex: 1;
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* ── 영화 태그 묶음 ── */
-    .movie-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      min-height: 32px;
-    }
-
-    /* ── 영화 태그 ── */
-    .movie-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #f0f0f0;
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 0.9rem;
-      color: #333;
-    }
-    .movie-tag button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #999;
-      font-size: 1rem;
-      line-height: 1;
-      padding: 0;
-      transition: color 0.15s;
-    }
+    .tier-content { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .movie-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
+    .movie-tag { display: inline-flex; align-items: center; gap: 6px; background: #f0f0f0; border-radius: 6px; padding: 5px 10px; font-size: 0.9rem; color: #333; }
+    .movie-tag button { background: none; border: none; cursor: pointer; color: #999; font-size: 1rem; padding: 0; }
     .movie-tag button:hover { color: #e05c5c; }
 
-    /* ── 입력 행 ── */
-    .input-row {
-      display: flex;
-      gap: 8px;
-    }
-    .input-row input {
-      flex: 1;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.88rem;
-      outline: none;
-      transition: border-color 0.15s;
-      color: #222;
-      background: #fafafa;
-    }
-    .input-row input:focus { border-color: #888; background: #fff; }
-    .input-row button {
-      border: none;
-      border-radius: 6px;
-      padding: 6px 14px;
-      font-size: 0.88rem;
-      cursor: pointer;
-      background: #444;
-      color: #fff;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    .input-row button:hover { background: #222; }
-
-    /* ── 빈 상태 안내 ── */
-    .empty-msg {
-      font-size: 0.82rem;
-      color: #bbb;
-      align-self: center;
-    }
-
-    /* ── 하단 안내 ── */
-    footer {
-      text-align: center;
-      margin-top: 24px;
-      font-size: 0.78rem;
-      color: #bbb;
-    }
+    .input-row { display: flex; gap: 8px; }
+    .input-row input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; font-size: 0.88rem; outline: none; background: #fafafa; }
+    .input-row button { border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; background: #444; color: #fff; }
+    .empty-msg { font-size: 0.82rem; color: #bbb; align-self: center; }
+    footer { text-align: center; margin-top: 24px; font-size: 0.78rem; color: #bbb; }
   </style>
 </head>
 <body>
 
   <h1>🎬 영화 티어리스트</h1>
 
+  <!-- 백업 및 불러오기 버튼 -->
+  <div class="controls">
+    <button class="btn-secondary" onclick="exportData()">내 리스트 파일로 저장</button>
+    <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">저장된 파일 불러오기</button>
+    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importData(event)">
+  </div>
+
   <div class="tier-table" id="tierTable"></div>
 
-  <footer>데이터는 이 브라우저에 자동 저장됩니다.</footer>
+  <footer>
+    데이터는 브라우저에 자동 저장됩니다.<br>
+    (※ 로그아웃 시 데이터가 사라질 수 있으니 '파일로 저장' 기능을 이용해 백업하세요!)
+  </footer>
 
   <script>
-    // ── 티어 정의 ──────────────────────────────────────────
     const TIERS = ['A', 'B', 'C', 'D'];
 
-    // ── localStorage 에서 데이터 불러오기 ──────────────────
+    // 데이터 불러오기
     function loadData() {
       try {
-        return JSON.parse(localStorage.getItem('movieTierlist')) || { A:[], B:[], C:[], D:[] };
+        const saved = localStorage.getItem('movieTierlist');
+        return saved ? JSON.parse(saved) : { A:[], B:[], C:[], D:[] };
       } catch {
         return { A:[], B:[], C:[], D:[] };
       }
     }
 
-    // ── localStorage 에 데이터 저장 ────────────────────────
+    // 데이터 저장하기
     function saveData(data) {
       localStorage.setItem('movieTierlist', JSON.stringify(data));
     }
 
-    // ── 영화 태그 요소 생성 ─────────────────────────────────
+    // [핵심] 파일로 내보내기 (JSON 다운로드)
+    function exportData() {
+      const data = loadData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'my_movie_tierlist.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // [핵심] 파일 불러오기 (JSON 읽기)
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (confirm('파일을 불러오면 현재 리스트가 덮어씌워집니다. 계속할까요?')) {
+            saveData(data);
+            render(data);
+          }
+        } catch (err) {
+          alert('올바른 데이터 파일이 아닙니다.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
     function createTag(title, tier, data) {
       const tag = document.createElement('span');
       tag.className = 'movie-tag';
-
       const text = document.createElement('span');
       text.textContent = title;
-
       const btn = document.createElement('button');
       btn.textContent = '✕';
-      btn.title = '삭제';
-      btn.addEventListener('click', () => {
+      btn.onclick = () => {
         data[tier] = data[tier].filter(t => t !== title);
         saveData(data);
         render(data);
-      });
-
+      };
       tag.appendChild(text);
       tag.appendChild(btn);
       return tag;
     }
 
-    // ── 전체 화면 렌더링 ────────────────────────────────────
     function render(data) {
       const table = document.getElementById('tierTable');
       table.innerHTML = '';
 
       TIERS.forEach(tier => {
-        // 행
         const row = document.createElement('div');
         row.className = 'tier-row';
-
-        // 라벨
         const label = document.createElement('div');
         label.className = `tier-label tier-${tier}`;
         label.textContent = tier;
-
-        // 콘텐츠 영역
         const content = document.createElement('div');
         content.className = 'tier-content';
-
-        // 영화 태그 목록
         const list = document.createElement('div');
         list.className = 'movie-list';
 
-        if (data[tier].length === 0) {
+        if (!data[tier] || data[tier].length === 0) {
           const empty = document.createElement('span');
           empty.className = 'empty-msg';
-          empty.textContent = '아직 추가된 영화가 없습니다.';
+          empty.textContent = '비어 있음';
           list.appendChild(empty);
         } else {
           data[tier].forEach(title => {
@@ -231,52 +149,41 @@
           });
         }
 
-        // 입력 행
         const inputRow = document.createElement('div');
         inputRow.className = 'input-row';
-
         const input = document.createElement('input');
         input.type = 'text';
-        input.placeholder = `${tier}티어에 영화 제목 입력`;
-        input.maxLength = 60;
-
+        input.placeholder = `${tier}티어 영화 추가...`;
         const addBtn = document.createElement('button');
         addBtn.textContent = '추가';
 
-        // 추가 동작
         function addMovie() {
           const title = input.value.trim();
-          if (!title) { input.focus(); return; }
+          if (!title) return;
+          if (!data[tier]) data[tier] = [];
           if (data[tier].includes(title)) {
-            alert(`"${title}"은(는) 이미 ${tier}티어에 있습니다.`);
-            input.select();
+            alert('이미 등록된 영화입니다.');
             return;
           }
           data[tier].push(title);
           saveData(data);
           render(data);
-          // 렌더 후 같은 티어 입력창에 포커스 유지
-          const inputs = document.querySelectorAll('.input-row input');
-          const idx = TIERS.indexOf(tier);
-          if (inputs[idx]) inputs[idx].focus();
         }
 
-        addBtn.addEventListener('click', addMovie);
-        input.addEventListener('keydown', e => { if (e.key === 'Enter') addMovie(); });
+        addBtn.onclick = addMovie;
+        input.onkeydown = (e) => { if (e.key === 'Enter') addMovie(); };
 
         inputRow.appendChild(input);
         inputRow.appendChild(addBtn);
-
         content.appendChild(list);
         content.appendChild(inputRow);
-
         row.appendChild(label);
         row.appendChild(content);
         table.appendChild(row);
       });
     }
 
-    // ── 초기 실행 ───────────────────────────────────────────
+    // 초기 실행
     render(loadData());
   </script>
 </body>
